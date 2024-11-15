@@ -50,20 +50,22 @@ module top_CPU(
     assign rt = bincode[20:16];
     assign rd = bincode[15:11];
     assign immediate = bincode[15:0];
-    
-    assign next_in0 = currentIAddr + 4;
-    assign next_in1 = next_in0 + (extended<<2);
-    assign next_in2 = {currentIAddr[31:28], bincode[25:0], 2'b00};
+
+    //PC跳转的三个选择的实现逻辑
+    assign next_in0 = currentIAddr + 4;//PC+4
+    assign next_in1 = next_in0 + (extended<<2);//branch
+    assign next_in2 = {currentIAddr[31:28], bincode[25:0], 2'b00};//jump
+    //剩下一个应该是PC写信号，为1则写上面三个之一，为0则不变（halt）
     
     assign DataBus = WriteData;
-    /* ���Ƶ�Ԫ */
+    /* 控制单元 */
     ControlUnit ControlUnit(
         .opcode(opcode), .zero(ALU_zero), .sign(ALU_sign),
         .PCWre(PCWre), .ALUSrcA(ALUSrcA), .ALUSrcB(ALUSrcB), .DBDataSrc(DBDataSrc), .RegWre(RegWre), /*.InsMemRW(InsMemRW),*/ .mRD(mRD), .mWR(mWR), .RegDst(RegDst), .ExtSel(ExtSel),
         .PCSrc(PCSrc), .ALUOp(ALUOp)
     );
     
-    /* 5���ؼ��ײ�ģ�� */
+    /* 5个关键底层模块 */
     PC PC(
         .clk(clk), .Reset(Reset), .PCWre(PCWre), .nextIAddr(nextIAddr),
         .currentIAddr(currentIAddr)
@@ -86,12 +88,12 @@ module top_CPU(
         .DataOut(DataOut)
     );
     
-    /* ��������չ */
+    /* 立即数扩展 */
     ImmediateExtend ImmediateExtend(
         .original(immediate), .ExtSel(ExtSel),
         .extended(extended)
     );
-    /* ����ѡ���� */
+    /* 数据选择器 */
     Mux4_32bits Mux_nextIAddr(
         .choice(PCSrc), .in0(next_in0), .in1(next_in1), .in2(next_in2), .in3(currentIAddr),
         .out(nextIAddr)
